@@ -126,32 +126,6 @@ class SEBlock(nn.Module):
 """# Custom ResNet Block"""
 
 # Input → Conv(3x3) → BN → ReLU → Conv(3x3) → BN → skip_connection → ReLU → Output
-# class BasicBlock(nn.Module):
-#     expansion = 1  # number of channels expanding in a block
-
-#     def __init__(self, in_planes, planes, stride=1):
-#         super(BasicBlock, self).__init__()
-#         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
-#         self.bn1 = nn.BatchNorm2d(planes)
-#         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
-#         self.bn2 = nn.BatchNorm2d(planes)
-
-#         # defines skip connection
-#         self.shortcut = nn.Sequential()
-#         if stride != 1 or in_planes != self.expansion * planes:
-#             self.shortcut = nn.Sequential(
-#                 nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
-#                 nn.BatchNorm2d(self.expansion * planes)
-#             )
-
-#     def forward(self, x):
-#         out = F.relu(self.bn1(self.conv1(x)))
-#         out = self.bn2(self.conv2(out))
-#         out += self.shortcut(x) # skip_connection!
-#         out = F.relu(out)
-#         return out
-
-# Input → Conv(3x3) → BN → ReLU → Conv(3x3) → BN → skip_connection → ReLU → Output
 class BasicBlock(nn.Module):
     expansion = 1  # Expands channel dimensions
 
@@ -214,25 +188,6 @@ class Root(nn.Module):
 This will implement a hierarchical residual block that recursively stacks multiple residual blocks, allowing deep feature refinement with skip connections.
 """
 
-# class Tree(nn.Module):
-#     def __init__(self, block, in_channels, out_channels, level=1, stride=1):
-#         super(Tree, self).__init__()
-#         self.root = Root(2*out_channels, out_channels)
-#         if level == 1:
-#             self.left_tree = block(in_channels, out_channels, stride=stride)
-#             self.right_tree = block(out_channels, out_channels, stride=1)
-#         else:
-#             self.left_tree = Tree(block, in_channels,
-#                                   out_channels, level=level-1, stride=stride)
-#             self.right_tree = Tree(block, out_channels,
-#                                    out_channels, level=level-1, stride=1)
-
-#     def forward(self, x):
-#         out1 = self.left_tree(x)
-#         out2 = self.right_tree(out1)
-#         out = self.root([out1, out2])
-#         return out
-
 class Tree(nn.Module):
     def __init__(self, block, in_channels, out_channels, level=3, stride=1, use_se = True):
         super(Tree, self).__init__()
@@ -292,12 +247,6 @@ class DLEnthusiasts_ResNet(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((pool_size, pool_size))
         self.linear = nn.Linear(num_channels[-1] * (pool_size)**2, num_classes)
 
-        # self.linear = nn.Linear(num_channels[4] * pool_size * pool_size, num_classes)
-        # self.linear = nn.Linear(num_channels[4] * (pool_size)**2, num_classes)
-
-        # self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        # self.linear = nn.Linear(num_channels[-1], num_classes)
-
     def forward(self, x):
         out = self.base(x)
         out = self.layer1(out)
@@ -307,9 +256,6 @@ class DLEnthusiasts_ResNet(nn.Module):
         out = self.layer5(out)
         out = self.layer6(out)
         out = self.avgpool(out)
-
-        # print("Shape before flattening", out.shape, flush = True) # flush = True: used for dynamically debugging during computing outputs
-        # print("Shape before flattening", out.shape)
 
         out = torch.flatten(out, 1)
 
@@ -334,8 +280,7 @@ import os
 from tqdm import tqdm
 import optuna
 
-# # Final Code for Hyperparameter Fine-tuning using Bayesian Optimization!
-# import optuna
+# Final Code for Hyperparameter Fine-tuning using Bayesian Optimization!
 
 # def objective(trial):
 #     torch.cuda.empty_cache()  # Clearing memory before starting new trial
@@ -413,7 +358,7 @@ import optuna
 # # Getting the best set of hyperparameters
 # print("Best Hyperparameters:", study.best_params)
 
-# # we identified as best set of hyperparams: ['C1': 16, 'C2': 32, 'C3': 128, 'C4': 256, 'Fi': 3, 'Ki': 1, 'P': 4, 'lr': 0.00037167893563643987, 'batch_size': 16, 'optimizer': 'Adam']
+# we identified as best set of hyperparams: ['C1': 16, 'C2': 32, 'C3': 128, 'C4': 256, 'Fi': 3, 'Ki': 1, 'P': 4, 'lr': 0.00037167893563643987, 'batch_size': 16, 'optimizer': 'Adam']
 
 optimized_num_channels = [16, 32, 128, 256, 256, 256]
 my_model = DLEnthusiasts_ResNet(block = BasicBlock, num_classes = 10, num_channels = optimized_num_channels,kernel_size = 1, filter_size = 3, pool_size= 4, use_se = True).to(device)
